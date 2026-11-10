@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Эхо Тень: Квантовый Побег</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@500;700&display=swap');
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background-color: #030308;
+            color: #00f0ff;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .glass-panel {
+            background: rgba(10, 15, 30, 0.75);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.15);
+        }
+
+        .neon-border {
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.4), inset 0 0 10px rgba(0, 240, 255, 0.2);
+        }
+
+        .neon-btn {
+            transition: all 0.2s ease;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+        }
+        .neon-btn:hover {
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.8);
+            transform: translateY(-2px);
+        }
+        .neon-btn:active {
+            transform: translateY(1px);
+        }
+
+        canvas {
+            display: block;
+            touch-action: none;
+        }
+
+        /* Mobile Controls Styling */
+        .touch-btn {
+            background: rgba(0, 240, 255, 0.1);
+            border: 2px solid rgba(0, 240, 255, 0.4);
+            backdrop-filter: blur(8px);
+        }
+        .touch-btn:active {
+            background: rgba(0, 240, 255, 0.4);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.8);
+        }
+    </style>
+</head>
+<body class="relative w-screen h-screen overflow-hidden bg-slate-950">
+
+    <!-- Main Canvas -->
+    <canvas id="gameCanvas" class="absolute inset-0 z-0"></canvas>
+
+    <!-- Top UI HUD -->
+    <header class="relative z-10 p-4 md:p-6 flex justify-between items-start pointer-events-none">
+        <div class="glass-panel rounded-2xl px-5 py-3 pointer-events-auto flex items-center space-x-6">
+            <div>
+                <p class="text-xs uppercase tracking-widest text-slate-400 font-semibold font-orbitron">Уровень</p>
+                <h1 id="levelDisplay" class="text-xl md:text-2xl font-black font-orbitron text-cyan-400">1 / 5</h1>
+            </div>
+            <div class="h-8 w-px bg-cyan-500/30"></div>
+            <div>
+                <p class="text-xs uppercase tracking-widest text-slate-400 font-semibold font-orbitron">Активные Эхо</p>
+                <div class="flex items-center space-x-1">
+                    <span id="echoesDisplay" class="text-xl md:text-2xl font-bold font-orbitron text-fuchsia-400">0 / 3</span>
+                </div>
+            </div>
+            <div class="h-8 w-px bg-cyan-500/30"></div>
+            <div>
+                <p class="text-xs uppercase tracking-widest text-slate-400 font-semibold font-orbitron">Время петли</p>
+                <span id="timerDisplay" class="text-xl md:text-2xl font-bold font-orbitron text-amber-400">0.0s</span>
+            </div>
+        </div>
+
+        <div class="glass-panel rounded-2xl px-3 py-2 pointer-events-auto flex items-center space-x-2">
+            <button id="resetLevelBtn" title="Перезапустить уровень (Key R)" class="p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-cyan-400 border border-cyan-500/30 transition">
+                <svg class="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            </button>
+            <button id="soundToggleBtn" class="p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-cyan-400 border border-cyan-500/30 transition">
+                <svg id="soundOnIcon" class="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+                <svg id="soundOffIcon" class="w-5 h-5 stroke-current hidden text-slate-500" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- On-Screen Touch Controls for Mobile -->
+    <div id="touchControls" class="absolute bottom-6 inset-x-6 z-10 flex justify-between items-end pointer-events-none md:hidden">
+        <!-- D-Pad -->
+        <div class="grid grid-cols-3 gap-2 pointer-events-auto">
+            <div></div>
+            <button id="btnUp" class="touch-btn w-14 h-14 rounded-2xl flex items-center justify-center text-cyan-300 font-bold text-xl">▲</button>
+            <div></div>
+            <button id="btnLeft" class="touch-btn w-14 h-14 rounded-2xl flex items-center justify-center text-cyan-300 font-bold text-xl">◀</button>
+            <button id="btnDown" class="touch-btn w-14 h-14 rounded-2xl flex items-center justify-center text-cyan-300 font-bold text-xl">▼</button>
+            <button id="btnRight" class="touch-btn w-14 h-14 rounded-2xl flex items-center justify-center text-cyan-300 font-bold text-xl">▶</button>
+        </div>
+
+        <!-- Echo Time Loop Action Button -->
+        <div class="pointer-events-auto">
+            <button id="btnEchoTouch" class="touch-btn w-20 h-20 rounded-full border-2 border-fuchsia-400 bg-fuchsia-500/20 text-fuchsia-300 font-orbitron font-extrabold text-xs flex flex-col items-center justify-center shadow-lg shadow-fuchsia-500/40 active:scale-95 transition">
+                <span>ECHO</span>
+                <span class="text-[9px] opacity-75">(LOOP)</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Overlay Screen (Menu / Game Over / Victory) -->
+    <div id="overlay" class="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-6">
+        <div class="glass-panel max-w-lg w-full p-8 rounded-3xl text-center space-y-6 border border-cyan-500/40 neon-border">
+            <div class="space-y-2">
+                <h1 id="overlayTitle" class="text-3xl md:text-4xl font-black font-orbitron text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-300">
+                    ЭХО ТЕНЬ
+                </h1>
+                <p id="overlaySubtitle" class="text-sm text-cyan-200/80 font-semibold tracking-wider">КВАНТОВЫЙ ПОБЕГ ИЗ ВРЕМЕННОЙ ПЕТЛИ</p>
+            </div>
+
+            <div id="instructions" class="bg-slate-900/80 rounded-2xl p-4 text-left text-xs md:text-sm text-slate-300 space-y-2.5 border border-slate-800">
+                <div class="flex items-start space-x-2">
+                    <span class="text-cyan-400 font-bold">►</span>
+                    <p><b>Движение:</b> Клавиши <span class="text-cyan-300 font-semibold">WASD / Стрелки</span> или Сенсорный D-Pad.</p>
+                </div>
+                <div class="flex items-start space-x-2">
+                    <span class="text-fuchsia-400 font-bold">►</span>
+                    <p><b>Квантовое Эхо (Перезапуск петли):</b> Нажмите <span class="text-fuchsia-300 font-semibold">Пробел / R</span>. Время вернётся назад, а ваш прошлый клон повторит все движения, помогая нажимать кнопки и отвлекать ловушки!</p>
+                </div>
+                <div class="flex items-start space-x-2">
+                    <span class="text-amber-400 font-bold">►</span>
+                    <p><b>Цель:</b> Сберите все квантовые сферы и доберитесь до Неонового Портала.</p>
+                </div>
+            </div>
+
+            <div id="modeSelection" class="grid grid-cols-2 gap-3 pt-2">
+                <button id="startStoryBtn" class="neon-btn py-4 rounded-2xl font-bold font-orbitron text-slate-950 bg-cyan-400 hover:bg-cyan-300">
+                    КАМПАНИЯ (5 УРОВНЕЙ)
+                </button>
+                <button id="startEndlessBtn" class="neon-btn py-4 rounded-2xl font-bold font-orbitron text-fuchsia-300 bg-fuchsia-950/60 border border-fuchsia-500/50 hover:bg-fuchsia-900/60">
+                    БЕСКОНЕЧНЫЙ РЕЖИМ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Web Audio Synth Sound Engine ---
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playStep() {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.05);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.05);
+            }
+
+            playEchoLoop() {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.35);
+            }
+
+            playPickup() {
+                if (!this.enabled || !this.ctx) return;
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.04);
+                    gain.gain.setValueAtTime(0.1, this.ctx.currentTime + idx * 0.04);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.04 + 0.15);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + idx * 0.04);
+                    osc.stop(this.ctx.currentTime + idx * 0.04 + 0.15);
+                });
+            }
+
+            playDeath() {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.4);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.4);
+            }
+
+            playWin() {
+                if (!this.enabled || !this.ctx) return;
+                const chord = [440, 554.37, 659.25, 880];
+                chord.forEach(freq => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.6);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.6);
+                });
+            }
+        }
+
+        const audio = new SoundEngine();
+
+        // --- Game Core Engine ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        const GRID_SIZE = 40;
+        let mapCols = Math.floor(width / GRID_SIZE);
+        let mapRows = Math.floor(height / GRID_SIZE);
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            mapCols = Math.floor(width / GRID_SIZE);
+            mapRows = Math.floor(height / GRID_SIZE);
+            if (currentLevelData) loadLevel(currentLevelIdx);
+        });
+
+        const STATE = { MENU: 0, PLAYING: 1, GAMEOVER: 2, WIN: 3 };
+        let gameState = STATE.MENU;
+        let gameMode = 'story'; // 'story' or 'endless'
+        let currentLevelIdx = 0;
+        let loopTime = 0;
+        let maxEchoes = 3;
+
+        // Player & Recording
+        const player = {
+            x: 0, y: 0,
+            vx: 0, vy: 0,
+            speed: 3.8,
+            radius: 12,
+            alive: true,
+            history: [] // Stores recorded frames {x, y, action}
+        };
+
+        // Echoes (Past clones)
+        let echoes = [];
+
+        // Level Elements
+        let currentLevelData = null;
+        let walls = [];
+        let buttons = [];
+        let doors = [];
+        let lasers = [];
+        let turrets = [];
+        let bullets = [];
+        let collectibles = [];
+        let portal = { x: 0, y: 0, active: false };
+        let particles = [];
+
+        // Input Handling
+        const keys = { Up: false, Down: false, Left: false, Right: false };
+
+        // --- Level Designs ---
+        const LEVELS = [
+            // Level 1: Basics - Button & Door
+            {
+                spawn: { x: 2, y: 3 },
+                portal: { x: 14, y: 3 },
+                walls: [
+                    {x: 0, y: 0, w: 17, h: 1}, {x: 0, y: 6, w: 17, h: 1},
+                    {x: 0, y: 0, w: 1, h: 7}, {x: 16, y: 0, w: 1, h: 7},
+                    {x: 8, y: 1, w: 1, h: 5} // Middle wall divider
+                ],
+                buttons: [{ id: 1, x: 5, y: 5, pressed: false }],
+                doors: [{ id: 1, x: 8, y: 3, open: false }],
+                lasers: [],
+                turrets: [],
+                collectibles: [{ x: 4, y: 2, collected: false }]
+            },
+            // Level 2: Laser Defense & Timed Echoes
+            {
+                spawn: { x: 2, y: 2 },
+                portal: { x: 15, y: 8 },
+                walls: [
+                    {x: 0, y: 0, w: 18, h: 1}, {x: 0, y: 10, w: 18, h: 1},
+                    {x: 0, y: 0, w: 1, h: 11}, {x: 17, y: 0, w: 1, h: 11},
+                    {x: 6, y: 1, w: 1, h: 7}, {x: 12, y: 3, w: 1, h: 7}
+                ],
+                buttons: [{ id: 1, x: 3, y: 8, pressed: false }],
+                doors: [],
+                lasers: [
+                    { x1: 6, y1: 8, x2: 12, y2: 8, active: true, buttonId: 1 }
+                ],
+                turrets: [],
+                collectibles: [{ x: 9, y: 4, collected: false }]
+            },
+            // Level 3: Turrets & Cover Echoes
+            {
+                spawn: { x: 2, y: 5 },
+                portal: { x: 16, y: 5 },
+                walls: [
+                    {x: 0, y: 0, w: 19, h: 1}, {x: 0, y: 10, w: 19, h: 1},
+                    {x: 0, y: 0, w: 1, h: 11}, {x: 18, y: 0, w: 1, h: 11},
+                    {x: 9, y: 1, w: 1, h: 4}, {x: 9, y: 6, w: 1, h: 4}
+                ],
+                buttons: [{ id: 1, x: 4, y: 2, pressed: false }],
+                doors: [{ id: 1, x: 9, y: 5, open: false }],
+                lasers: [],
+                turrets: [{ x: 14, y: 2, fireRate: 70, timer: 0, targetX: 2, targetY: 5 }],
+                collectibles: [{ x: 5, y: 8, collected: false }, { x: 14, y: 8, collected: false }]
+            },
+            // Level 4: Dual Button Synchronization
+            {
+                spawn: { x: 2, y: 5 },
+                portal: { x: 15, y: 5 },
+                walls: [
+                    {x: 0, y: 0, w: 18, h: 1}, {x: 0, y: 10, w: 18, h: 1},
+                    {x: 0, y: 0, w: 1, h: 11}, {x: 17, y: 0, w: 1, h: 11},
+                    {x: 8, y: 1, w: 1, h: 4}, {x: 8, y: 6, w: 1, h: 4}
+                ],
+                buttons: [
+                    { id: 1, x: 4, y: 2, pressed: false },
+                    { id: 2, x: 4, y: 8, pressed: false }
+                ],
+                doors: [{ id: 1, x: 8, y: 5, open: false, requireBoth: true }],
+                lasers: [],
+                turrets: [],
+                collectibles: [{ x: 12, y: 2, collected: false }, { x: 12, y: 8, collected: false }]
+            },
+            // Level 5: Quantum Gauntlet (Final Challenge)
+            {
+                spawn: { x: 2, y: 2 },
+                portal: { x: 16, y: 9 },
+                walls: [
+                    {x: 0, y: 0, w: 19, h: 1}, {x: 0, y: 11, w: 19, h: 1},
+                    {x: 0, y: 0, w: 1, h: 12}, {x: 18, y: 0, w: 1, h: 12},
+                    {x: 6, y: 1, w: 1, h: 8}, {x: 12, y: 3, w: 1, h: 8}
+                ],
+                buttons: [
+                    { id: 1, x: 3, y: 9, pressed: false },
+                    { id: 2, x: 9, y: 2, pressed: false }
+                ],
+                doors: [
+                    { id: 1, x: 6, y: 9, open: false },
+                    { id: 2, x: 12, y: 2, open: false }
+                ],
+                lasers: [
+                    { x1: 12, y1: 6, x2: 18, y2: 6, active: true, buttonId: 1 }
+                ],
+                turrets: [{ x: 9, y: 9, fireRate: 50, timer: 0 }],
+                collectibles: [{ x: 3, y: 5, collected: false }, { x: 9, y: 5, collected: false }, { x: 15, y: 2, collected: false }]
+            }
+        ];
+
+        // --- Load Level ---
+        function loadLevel(idx) {
+            currentLevelIdx = idx;
+            const lvl = LEVELS[idx];
+            currentLevelData = lvl;
+
+            const gridOffsetX = Math.max(0, Math.floor((width - 19 * GRID_SIZE) / 2));
+            const gridOffsetY = Math.max(0, Math.floor((height - 12 * GRID_SIZE) / 2));
+
+            // Load Entities with grid alignment
+            player.x = gridOffsetX + lvl.spawn.x * GRID_SIZE + GRID_SIZE / 2;
+            player.y = gridOffsetY + lvl.spawn.y * GRID_SIZE + GRID_SIZE / 2;
+            player.vx = 0; player.vy = 0;
+            player.alive = true;
+            player.history = [];
+
+            echoes = [];
+            bullets = [];
+            particles = [];
+            loopTime = 0;
+
+            walls = lvl.walls.map(w => ({
+                x: gridOffsetX + w.x * GRID_SIZE,
+                y: gridOffsetY + w.y * GRID_SIZE,
+                w: w.w * GRID_SIZE,
+                h: w.h * GRID_SIZE
+            }));
+
+            buttons = lvl.buttons.map(b => ({
+                ...b,
+                x: gridOffsetX + b.x * GRID_SIZE + GRID_SIZE / 2,
+                y: gridOffsetY + b.y * GRID_SIZE + GRID_SIZE / 2,
+                pressed: false
+            }));
+
+            doors = lvl.doors.map(d => ({
+                ...d,
+                x: gridOffsetX + d.x * GRID_SIZE,
+                y: gridOffsetY + d.y * GRID_SIZE,
+                w: GRID_SIZE,
+                h: GRID_SIZE,
+                open: false
+            }));
+
+            lasers = lvl.lasers.map(l => ({
+                ...l,
+                x1: gridOffsetX + l.x1 * GRID_SIZE + GRID_SIZE / 2,
+                y1: gridOffsetY + l.y1 * GRID_SIZE + GRID_SIZE / 2,
+                x2: gridOffsetX + l.x2 * GRID_SIZE + GRID_SIZE / 2,
+                y2: gridOffsetY + l.y2 * GRID_SIZE + GRID_SIZE / 2
+            }));
+
+            turrets = lvl.turrets.map(t => ({
+                ...t,
+                x: gridOffsetX + t.x * GRID_SIZE + GRID_SIZE / 2,
+                y: gridOffsetY + t.y * GRID_SIZE + GRID_SIZE / 2,
+                timer: 0
+            }));
+
+            collectibles = lvl.collectibles.map(c => ({
+                ...c,
+                x: gridOffsetX + c.x * GRID_SIZE + GRID_SIZE / 2,
+                y: gridOffsetY + c.y * GRID_SIZE + GRID_SIZE / 2,
+                collected: false
+            }));
+
+            portal = {
+                x: gridOffsetX + lvl.portal.x * GRID_SIZE + GRID_SIZE / 2,
+                y: gridOffsetY + lvl.portal.y * GRID_SIZE + GRID_SIZE / 2,
+                active: false
+            };
+
+            updateHUD();
+        }
+
+        // --- Trigger Echo Time Loop ---
+        function triggerTimeLoop() {
+            if (player.history.length === 0 || !player.alive) return;
+
+            audio.playEchoLoop();
+
+            // Create Echo from current recording
+            if (echoes.length >= maxEchoes) {
+                echoes.shift(); // Remove oldest echo
+            }
+
+            echoes.push({
+                history: [...player.history],
+                frame: 0,
+                x: player.history[0].x,
+                y: player.history[0].y,
+                alive: true
+            });
+
+            // Respawn Player back at start
+            const gridOffsetX = Math.max(0, Math.floor((width - 19 * GRID_SIZE) / 2));
+            const gridOffsetY = Math.max(0, Math.floor((height - 12 * GRID_SIZE) / 2));
+            player.x = gridOffsetX + currentLevelData.spawn.x * GRID_SIZE + GRID_SIZE / 2;
+            player.y = gridOffsetY + currentLevelData.spawn.y * GRID_SIZE + GRID_SIZE / 2;
+            player.vx = 0; player.vy = 0;
+            player.history = [];
+            loopTime = 0;
+
+            // Flash Particle FX
+            createParticles(player.x, player.y, '#f0abfc', 25);
+            updateHUD();
+        }
+
+        // --- Particle FX ---
+        function createParticles(x, y, color, count = 10) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 1 + Math.random() * 4;
+                particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    color,
+                    life: 1.0,
+                    decay: 0.03 + Math.random() * 0.03
+                });
+            }
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= p.decay;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function drawParticles() {
+            particles.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3 * p.life, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life;
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 8;
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+                ctx.shadowBlur = 0;
+            });
+        }
+
+        // --- Physics & Updates ---
+        function updateGame() {
+            if (gameState !== STATE.PLAYING) return;
+
+            loopTime += 1 / 60;
+
+            // Player Movement Input
+            player.vx = 0;
+            player.vy = 0;
+            if (keys.Up) player.vy = -player.speed;
+            if (keys.Down) player.vy = player.speed;
+            if (keys.Left) player.vx = -player.speed;
+            if (keys.Right) player.vx = player.speed;
+
+            // Diagonal movement normalization
+            if (player.vx !== 0 && player.vy !== 0) {
+                player.vx *= 0.7071;
+                player.vy *= 0.7071;
+            }
+
+            if (player.vx !== 0 || player.vy !== 0) {
+                audio.playStep();
+            }
+
+            // Move Player & Collide Walls
+            let nextX = player.x + player.vx;
+            let nextY = player.y + player.vy;
+
+            // Wall Collisions
+            walls.forEach(w => {
+                if (nextX + player.radius > w.x && nextX - player.radius < w.x + w.w &&
+                    player.y + player.radius > w.y && player.y - player.radius < w.y + w.h) {
+                    nextX = player.x;
+                }
+                if (player.x + player.radius > w.x && player.x - player.radius < w.x + w.w &&
+                    nextY + player.radius > w.y && nextY - player.radius < w.y + w.h) {
+                    nextY = player.y;
+                }
+            });
+
+            // Door Collisions
+            doors.forEach(d => {
+                if (!d.open) {
+                    if (nextX + player.radius > d.x && nextX - player.radius < d.x + d.w &&
+                        player.y + player.radius > d.y && player.y - player.radius < d.y + d.h) {
+                        nextX = player.x;
+                    }
+                    if (player.x + player.radius > d.x && player.x - player.radius < d.x + d.w &&
+                        nextY + player.radius > d.y && nextY - player.radius < d.y + d.h) {
+                        nextY = player.y;
+                    }
+                }
+            });
+
+            player.x = nextX;
+            player.y = nextY;
+
+            // Record Position for Echoes
+            player.history.push({ x: player.x, y: player.y });
+
+            // Update Echo Clones
+            echoes.forEach(e => {
+                if (e.alive && e.frame < e.history.length) {
+                    const pos = e.history[e.frame];
+                    e.x = pos.x;
+                    e.y = pos.y;
+                    e.frame++;
+                }
+            });
+
+            // Reset buttons pressed state
+            buttons.forEach(b => b.pressed = false);
+
+            // Check Button Triggers (Player or Echoes standing on them)
+            const allEntities = [player, ...echoes.filter(e => e.alive)];
+            buttons.forEach(b => {
+                allEntities.forEach(ent => {
+                    const dist = Math.hypot(ent.x - b.x, ent.y - b.y);
+                    if (dist < 20) b.pressed = true;
+                });
+            });
+
+            // Doors Logic
+            doors.forEach(d => {
+                if (d.requireBoth) {
+                    d.open = buttons.every(b => b.pressed);
+                } else {
+                    const linkedBtn = buttons.find(b => b.id === d.id);
+                    d.open = linkedBtn ? linkedBtn.pressed : false;
+                }
+            });
+
+            // Lasers Logic
+            lasers.forEach(l => {
+                const linkedBtn = buttons.find(b => b.id === l.buttonId);
+                l.active = linkedBtn ? !linkedBtn.pressed : true;
+
+                if (l.active && player.alive) {
+                    // Check laser collision with player
+                    if (lineCircleCollide(l.x1, l.y1, l.x2, l.y2, player.x, player.y, player.radius)) {
+                        killPlayer();
+                    }
+                }
+            });
+
+            // Turrets & Bullets
+            turrets.forEach(t => {
+                t.timer++;
+                if (t.timer >= t.fireRate) {
+                    t.timer = 0;
+                    // Fire towards player or closest Echo
+                    let target = player;
+                    bullets.push({
+                        x: t.x, y: t.y,
+                        vx: Math.cos(Math.atan2(target.y - t.y, target.x - t.x)) * 5,
+                        vy: Math.sin(Math.atan2(target.y - t.y, target.x - t.x)) * 5
+                    });
+                }
+            });
+
+            // Update Bullets
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const b = bullets[i];
+                b.x += b.vx;
+                b.y += b.vy;
+
+                // Hit Player
+                if (Math.hypot(b.x - player.x, b.y - player.y) < player.radius) {
+                    killPlayer();
+                    bullets.splice(i, 1);
+                    continue;
+                }
+
+                // Hit Echo (Echo absorbs bullet)
+                echoes.forEach(e => {
+                    if (e.alive && Math.hypot(b.x - e.x, b.y - e.y) < player.radius) {
+                        createParticles(e.x, e.y, '#e879f9', 12);
+                        bullets.splice(i, 1);
+                    }
+                });
+
+                // Hit Walls
+                walls.forEach(w => {
+                    if (b.x > w.x && b.x < w.x + w.w && b.y > w.y && b.y < w.y + w.h) {
+                        bullets.splice(i, 1);
+                    }
+                });
+            }
+
+            // Collectibles Logic
+            let remainingCollectibles = 0;
+            collectibles.forEach(c => {
+                if (!c.collected) {
+                    if (Math.hypot(player.x - c.x, player.y - c.y) < 20) {
+                        c.collected = true;
+                        audio.playPickup();
+                        createParticles(c.x, c.y, '#fbbf24', 15);
+                    } else {
+                        remainingCollectibles++;
+                    }
+                }
+            });
+
+            // Portal Activation
+            portal.active = (remainingCollectibles === 0);
+
+            // Win Level Condition
+            if (portal.active && Math.hypot(player.x - portal.x, player.y - portal.y) < 25) {
+                audio.playWin();
+                if (currentLevelIdx + 1 < LEVELS.length) {
+                    loadLevel(currentLevelIdx + 1);
+                } else {
+                    showOverlay("ПОБЕДА!", "Вы успешно совершили Квантовый Побег из всех временных петель!");
+                    gameState = STATE.WIN;
+                }
+            }
+
+            updateParticles();
+            document.getElementById('timerDisplay').innerText = `${loopTime.toFixed(1)}s`;
+        }
+
+        function killPlayer() {
+            if (!player.alive) return;
+            player.alive = false;
+            audio.playDeath();
+            createParticles(player.x, player.y, '#f43f5e', 30);
+
+            setTimeout(() => {
+                loadLevel(currentLevelIdx);
+            }, 600);
+        }
+
+        function lineCircleCollide(x1, y1, x2, y2, cx, cy, r) {
+            const len = Math.hypot(x2 - x1, y2 - y1);
+            const dot = (((cx - x1) * (x2 - x1)) + ((cy - y1) * (y2 - y1))) / (len * len);
+            const closestX = x1 + (dot * (x2 - x1));
+            const closestY = y1 + (dot * (y2 - y1));
+
+            // Check if point is on segment
+            const onSegment = linePointCollide(x1, y1, x2, y2, closestX, closestY);
+            if (!onSegment) return false;
+
+            return Math.hypot(closestX - cx, closestY - cy) < r;
+        }
+
+        function linePointCollide(x1, y1, x2, y2, px, py) {
+            const d1 = Math.hypot(px - x1, py - y1);
+            const d2 = Math.hypot(px - x2, py - y2);
+            const lineLen = Math.hypot(x2 - x1, y2 - y1);
+            return d1 + d2 >= lineLen - 0.1 && d1 + d2 <= lineLen + 0.1;
+        }
+
+        // --- Drawing Canvas ---
+        function render() {
+            ctx.fillStyle = '#030308';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw Grid Background Pattern
+            ctx.strokeStyle = 'rgba(0, 240, 255, 0.04)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < width; x += GRID_SIZE) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+            }
+            for (let y = 0; y < height; y += GRID_SIZE) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+            }
+
+            if (gameState === STATE.PLAYING || gameState === STATE.GAMEOVER) {
+                // Render Walls
+                walls.forEach(w => {
+                    ctx.fillStyle = '#091328';
+                    ctx.fillRect(w.x, w.y, w.w, w.h);
+                    ctx.strokeStyle = '#00f0ff';
+                    ctx.lineWidth = 1.5;
+                    ctx.strokeRect(w.x, w.y, w.w, w.h);
+                });
+
+                // Render Buttons
+                buttons.forEach(b => {
+                    ctx.beginPath();
+                    ctx.arc(b.x, b.y, 14, 0, Math.PI * 2);
+                    ctx.fillStyle = b.pressed ? '#22c55e' : '#e11d48';
+                    ctx.shadowColor = b.pressed ? '#22c55e' : '#e11d48';
+                    ctx.shadowBlur = 12;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                });
+
+                // Render Doors
+                doors.forEach(d => {
+                    if (!d.open) {
+                        ctx.fillStyle = 'rgba(239, 68, 68, 0.4)';
+                        ctx.fillRect(d.x, d.y, d.w, d.h);
+                        ctx.strokeStyle = '#ef4444';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(d.x, d.y, d.w, d.h);
+                    }
+                });
+
+                // Render Lasers
+                lasers.forEach(l => {
+                    if (l.active) {
+                        ctx.beginPath();
+                        ctx.moveTo(l.x1, l.y1);
+                        ctx.lineTo(l.x2, l.y2);
+                        ctx.strokeStyle = '#f43f5e';
+                        ctx.lineWidth = 4;
+                        ctx.shadowColor = '#f43f5e';
+                        ctx.shadowBlur = 16;
+                        ctx.stroke();
+                        ctx.shadowBlur = 0;
+                    }
+                });
+
+                // Render Turrets
+                turrets.forEach(t => {
+                    ctx.beginPath();
+                    ctx.arc(t.x, t.y, 15, 0, Math.PI * 2);
+                    ctx.fillStyle = '#64748b';
+                    ctx.fill();
+                    ctx.strokeStyle = '#ef4444';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                });
+
+                // Render Bullets
+                bullets.forEach(b => {
+                    ctx.beginPath();
+                    ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
+                    ctx.fillStyle = '#f43f5e';
+                    ctx.shadowColor = '#f43f5e';
+                    ctx.shadowBlur = 10;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                });
+
+                // Render Collectibles
+                collectibles.forEach(c => {
+                    if (!c.collected) {
+                        ctx.beginPath();
+                        ctx.arc(c.x, c.y, 8, 0, Math.PI * 2);
+                        ctx.fillStyle = '#fbbf24';
+                        ctx.shadowColor = '#fbbf24';
+                        ctx.shadowBlur = 14;
+                        ctx.fill();
+                        ctx.shadowBlur = 0;
+                    }
+                });
+
+                // Render Portal
+                ctx.beginPath();
+                ctx.arc(portal.x, portal.y, 18, 0, Math.PI * 2);
+                ctx.fillStyle = portal.active ? 'rgba(0, 240, 255, 0.3)' : 'rgba(100, 116, 139, 0.2)';
+                ctx.strokeStyle = portal.active ? '#00f0ff' : '#475569';
+                ctx.lineWidth = 3;
+                ctx.shadowColor = portal.active ? '#00f0ff' : 'transparent';
+                ctx.shadowBlur = 20;
+                ctx.fill();
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // Render Echo Clones (Pink Phantom Trails)
+                echoes.forEach(e => {
+                    if (e.alive) {
+                        ctx.beginPath();
+                        ctx.arc(e.x, e.y, player.radius, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(232, 121, 249, 0.4)';
+                        ctx.strokeStyle = '#e879f9';
+                        ctx.lineWidth = 2;
+                        ctx.shadowColor = '#e879f9';
+                        ctx.shadowBlur = 12;
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.shadowBlur = 0;
+                    }
+                });
+
+                // Render Player
+                if (player.alive) {
+                    ctx.beginPath();
+                    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = '#00f0ff';
+                    ctx.shadowColor = '#00f0ff';
+                    ctx.shadowBlur = 16;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+
+                drawParticles();
+            }
+
+            requestAnimationFrame(render);
+        }
+
+        function updateHUD() {
+            document.getElementById('levelDisplay').innerText = `${currentLevelIdx + 1} / ${LEVELS.length}`;
+            document.getElementById('echoesDisplay').innerText = `${echoes.length} / ${maxEchoes}`;
+        }
+
+        function showOverlay(title, subtitle) {
+            document.getElementById('overlayTitle').innerText = title;
+            document.getElementById('overlaySubtitle').innerText = subtitle;
+            document.getElementById('overlay').classList.remove('hidden');
+        }
+
+        // --- Event Listeners & Mobile Controls ---
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'KeyW' || e.code === 'ArrowUp') keys.Up = true;
+            if (e.code === 'KeyS' || e.code === 'ArrowDown') keys.Down = true;
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.Left = true;
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.Right = true;
+            
+            if (e.code === 'Space' || e.code === 'KeyR') {
+                if (gameState === STATE.PLAYING) triggerTimeLoop();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'KeyW' || e.code === 'ArrowUp') keys.Up = false;
+            if (e.code === 'KeyS' || e.code === 'ArrowDown') keys.Down = false;
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.Left = false;
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.Right = false;
+        });
+
+        // Touch Control Listeners
+        const bindTouchBtn = (id, keyName) => {
+            const btn = document.getElementById(id);
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[keyName] = true; });
+            btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[keyName] = false; });
+        };
+        bindTouchBtn('btnUp', 'Up');
+        bindTouchBtn('btnDown', 'Down');
+        bindTouchBtn('btnLeft', 'Left');
+        bindTouchBtn('btnRight', 'Right');
+
+        document.getElementById('btnEchoTouch').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (gameState === STATE.PLAYING) triggerTimeLoop();
+        });
+
+        // UI Buttons
+        document.getElementById('startStoryBtn').addEventListener('click', () => {
+            audio.init();
+            gameState = STATE.PLAYING;
+            document.getElementById('overlay').classList.add('hidden');
+            loadLevel(0);
+        });
+
+        document.getElementById('resetLevelBtn').addEventListener('click', () => {
+            if (gameState === STATE.PLAYING) loadLevel(currentLevelIdx);
+        });
+
+        document.getElementById('soundToggleBtn').addEventListener('click', () => {
+            audio.enabled = !audio.enabled;
+            document.getElementById('soundOnIcon').classList.toggle('hidden', !audio.enabled);
+            document.getElementById('soundOffIcon').classList.toggle('hidden', audio.enabled);
+        });
+
+        // Loop Start
+        setInterval(updateGame, 1000 / 60);
+        render();
+    </script>
+</body>
+</html>
